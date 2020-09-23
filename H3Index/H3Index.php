@@ -190,6 +190,49 @@ class H3Index {
     }
 
     /**
+     * Возвращает соседние гексагоны.
+     * @return H3Index[]
+     */
+    public function getAllNeighbors(): array {
+        $neighbors = [];
+        for ($direction = 1; $direction <= 6; $direction++) {
+            $neighbors[$direction] = $this->getNeighbor($direction);
+        }
+        return $neighbors;
+    }
+
+    /**
+     * Возвращает все гексагоны в круге (в терминологии H3 - в Z-кольце) радиусом ringSize
+     * При ringSize = 1 возвращает соседние гексагоны и себя
+     * @return H3Index[]
+     */
+    public function getAllHexagonsInZRing(int $ringSize): array {
+        $allHexagonsInRing = [
+            $this->getAsHex() => $this,
+        ];
+        /** @var H3Index[] $previousRing */
+        $previousRing = [
+            $this,
+        ];
+        for ($i = 0; $i < $ringSize; $i++) {
+            $newPreviousRing = [];
+            // У всех гексагонов предыдущего кольца считаем соседей. Кого еще не учли - становятся новым предыдущим кольцом.
+            foreach ($previousRing as $h3Index) {
+                $neighbors = $h3Index->getAllNeighbors();
+                foreach ($neighbors as $neighborH3Index) {
+                    $neighborIndexAsString = $neighborH3Index->getAsHex();
+                    if (!isset($allHexagonsInRing[$neighborIndexAsString])) {
+                        $newPreviousRing[]                         = $neighborH3Index;
+                        $allHexagonsInRing[$neighborIndexAsString] = $neighborH3Index;
+                    }
+                }
+            }
+            $previousRing = $newPreviousRing;
+        }
+        return $allHexagonsInRing;
+    }
+
+    /**
      * Возвращает центр гексагона в привычных координатах
      */
     public function getCenter(): GeoCoordinates {
